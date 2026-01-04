@@ -1,62 +1,80 @@
 import tkinter as tk
 from tkinter import messagebox
-from gui import TambolaGUI
+from game_screen import GameScreen
 
 class LobbyScreen:
-    def __init__(self, root):
+    def __init__(self, root, client):
         self.root = root
+        self.client = client
+        self.is_host = False
+
         self.root.title("Tambola Lobby")
-        self.root.geometry("400x400")
+        self.root.geometry("420x420")
 
-        tk.Label(root, text="🎉 Tambola Lobby 🎉",
-                 font=("Arial", 20, "bold")).pack(pady=15)
+        tk.Label(root, text="Tambola Lobby", font=("Arial", 18)).pack(pady=10)
 
-        tk.Label(root, text="Number of Players",
-                 font=("Arial", 12)).pack()
+        tk.Label(root, text="Player Name").pack()
+        self.name_entry = tk.Entry(root)
+        self.name_entry.pack(pady=5)
 
-        self.count_entry = tk.Entry(root, font=("Arial", 14))
-        self.count_entry.pack(pady=5)
+        tk.Button(
+            root, text="Create Room", width=20,
+            command=self.create_room
+        ).pack(pady=10)
 
-        tk.Button(root, text="Next",
-                  font=("Arial", 12),
-                  bg="orange", fg="white",
-                  command=self.next_step).pack(pady=10)
+        tk.Label(root, text="Room ID").pack(pady=(15, 0))
+        self.room_entry = tk.Entry(root)
+        self.room_entry.pack(pady=5)
 
-        self.name_entries = []
+        tk.Button(
+            root, text="Join Room", width=20,
+            command=self.join_room
+        ).pack(pady=10)
 
-    def next_step(self):
-        try:
-            count = int(self.count_entry.get())
-            if count < 1 or count > 4:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Error", "Enter 1–4 players")
+        self.start_btn = tk.Button(
+            root, text="Start Game", width=20,
+            state=tk.DISABLED,
+            command=self.start_game
+        )
+        self.start_btn.pack(pady=15)
+
+        self.client.on("ROOM_CREATED", self.on_room_created)
+        self.client.on("GAME_STARTED", self.on_game_started)
+        self.client.on("ERROR", self.on_error)
+
+    def create_room(self):
+        name = self.name_entry.get().strip()
+        if not name:
+            messagebox.showerror("Error", "Enter player name")
             return
+        self.client.send("CREATE_ROOM", {"player_name": name})
 
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        tk.Label(self.root, text="Enter Player Names",
-                 font=("Arial", 16, "bold")).pack(pady=10)
-
-        for i in range(count):
-            entry = tk.Entry(self.root, font=("Arial", 14))
-            entry.pack(pady=5)
-            self.name_entries.append(entry)
-
-        tk.Button(self.root, text="Start Game",
-                  font=("Arial", 14),
-                  bg="green", fg="white",
-                  command=self.start_game).pack(pady=15)
+    def join_room(self):
+        name = self.name_entry.get().strip()
+        room_id = self.room_entry.get().strip().upper()
+        if not name or not room_id:
+            messagebox.showerror("Error", "Enter name and Room ID")
+            return
+        self.client.send("JOIN_ROOM", {
+            "room_id": room_id,
+            "player_name": name
+        })
 
     def start_game(self):
-        names = [e.get().strip() for e in self.name_entries]
+        self.client.send("START_GAME")
 
-        if any(not name for name in names):
-            messagebox.showerror("Error", "All names required!")
-            return
+    def on_room_created(self, data):
+        self.is_host = True
+        self.start_btn.config(state=tk.NORMAL)
+        self.room_entry.delete(0, tk.END)
+        self.room_entry.insert(0, data["room_id"])
+        messagebox.showinfo(
+            "Room Created",
+            f"Room ID: {data['room_id']}"
+        )
 
-        for widget in self.root.winfo_children():
-            widget.destroy()
+    def on_game_started(self, data):
+        GameScreen(self.root, self.client, self.is_host)
 
-        TambolaGUI(self.root, names)
+    def on_error(self, data):
+        messagebox.showerror("Error", data.get("message", "Unknown error"))
