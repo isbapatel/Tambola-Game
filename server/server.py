@@ -3,23 +3,18 @@ import json
 import os
 import random
 import time
-import pathlib
-import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
 import websockets
 
 # ================= CONFIG =================
 PORT = int(os.environ.get("PORT", 10000))
-BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
-WEB_DIR = BASE_DIR / "web"
 
 ROOMS = {}
 NUMBERS = list(range(1, 101))
-GAME_DURATION = 180
-DRAW_INTERVAL = 2
+GAME_DURATION = 180      # seconds
+DRAW_INTERVAL = 2        # seconds
 
 
-# ================= GAME LOGIC =================
+# ================= ROOM =================
 class Room:
     def __init__(self, room_id, host_ws, host_name):
         self.room_id = room_id
@@ -30,19 +25,25 @@ class Room:
         self.started = False
 
 
-async def broadcast(room, message):
-    for ws in list(room.players.keys()):
+# ================= HELPERS =================
+async def broadcast(room, payload):
+    dead = []
+    for ws in room.players:
         try:
-            await ws.send(json.dumps(message))
+            await ws.send(json.dumps(payload))
         except:
-            pass
+            dead.append(ws)
+
+    for ws in dead:
+        room.players.pop(ws, None)
 
 
 async def game_loop(room):
-    start = time.time()
+    start_time = time.time()
 
-    while time.time() - start < GAME_DURATION:
+    while time.time() - start_time < GAME_DURATION:
         await asyncio.sleep(DRAW_INTERVAL)
+
         remaining = list(set(NUMBERS) - room.used_numbers)
         if not remaining:
             break
@@ -62,6 +63,7 @@ async def game_loop(room):
         })
 
     leaderboard = sorted(room.scores.items(), key=lambda x: x[1], reverse=True)
+
     await broadcast(room, {
         "type": "GAME_OVER",
         "data": leaderboard
@@ -73,60 +75,54 @@ async def ws_handler(ws):
     try:
         async for message in ws:
             msg = json.loads(message)
-            t = msg.get("type")
-            d = msg.get("data", {})
+            msg_type = msg.get("type")
+            data = msg.get("data", {})
 
-            room = None
-            for r in ROOMS.values():
-                if ws in r.players:
-                    room = r
+            current_room = None
+            for room in ROOMS.values():
+                if ws in room.players:
+                    current_room = room
                     break
 
-            if t == "CREATE_ROOM":
-                rid = ''.join(random.choices("ABCDEFGH123456789", k=6))
-                ROOMS[rid] = Room(rid, ws, d["player_name"])
+            if msg_type == "CREATE_ROOM":
+                room_id = ''.join(random.choices("ABCDEFGH123456789", k=6))
+                ROOMS[room_id] = Room(room_id, ws, data["player_name"])
+
                 await ws.send(json.dumps({
                     "type": "ROOM_CREATED",
-                    "data": {"room_id": rid}
+                    "data": {"room_id": room_id}
                 }))
 
-            elif t == "JOIN_ROOM":
-                room = ROOMS.get(d["room_id"])
+            elif msg_type == "JOIN_ROOM":
+                room = ROOMS.get(data["room_id"])
                 if room:
-                    room.players[ws] = d["player_name"]
-                    room.scores[d["player_name"]] = 0
+                    room.players[ws] = data["player_name"]
+                    room.scores[data["player_name"]] = 0
 
-            elif t == "START_GAME":
-                if room and ws == room.host and not room.started:
-                    room.started = True
-                    await broadcast(room, {"type": "GAME_STARTED", "data": {}})
-                    asyncio.create_task(game_loop(room))
+                    await broadcast(room, {
+                        "type": "PLAYER_JOINED",
+                        "data": {"players": list(room.scores.keys())}
+                    })
+
+            elif msg_type == "START_GAME":
+                if current_room and ws == current_room.host and not current_room.started:
+                    current_room.started = True
+                    await broadcast(current_room, {
+                        "type": "GAME_STARTED",
+                        "data": {}
+                    })
+                    asyncio.create_task(game_loop(current_room))
 
     except:
         pass
 
 
-# ================= HTTP SERVER =================
-class WebHandler(SimpleHTTPRequestHandler):
-    def translate_path(self, path):
-        if path == "/" or path == "":
-            return str(WEB_DIR / "index.html")
-        return str(WEB_DIR / path.lstrip("/"))
-
-
-def start_http():
-    httpd = HTTPServer(("0.0.0.0", PORT), WebHandler)
-    print(f"HTTP server running on port {PORT}")
-    httpd.serve_forever()
-
-
 # ================= MAIN =================
-async def start_ws():
+async def main():
+    print(f"WebSocket server running on port {PORT}")
     async with websockets.serve(ws_handler, "0.0.0.0", PORT):
-        print(f"WebSocket running on port {PORT}")
         await asyncio.Future()
 
 
 if __name__ == "__main__":
-    threading.Thread(target=start_http, daemon=True).start()
-    asyncio.run(start_ws())
+    asyncio.run(main())
