@@ -1,0 +1,136 @@
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #1a1a1a, #000);
+  color: #fff;
+  min-height: 100vh;
+}
+
+/* APP CONTAINER */
+#app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* SCREEN HANDLING */
+.screen {
+  display: none;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* HEADINGS */
+h1, h2, h3 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* CARD STYLE */
+.card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+/* INPUTS */
+input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  margin-bottom: 12px;
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  font-size: 15px;
+}
+
+input::placeholder {
+  color: #aaa;
+}
+
+/* BUTTONS */
+button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(255,87,34,0.4);
+}
+
+/* HR */
+hr {
+  border: none;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 20px 0;
+}
+
+/* WAITING ROOM */
+#waiting-screen ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#waiting-screen li {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* GAME SCREEN */
+#current-number {
+  font-size: 64px;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* TICKET PLACEHOLDER */
+.ticket-placeholder {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+  border-radius: 12px;
+  color: #aaa;
+}
+
+/* LEADERBOARD */
+#leaderboard-screen ol {
+  padding-left: 20px;
+}
+
+#leaderboard-screen li {
+  padding: 10px 0;
+  font-size: 18px;
+}
