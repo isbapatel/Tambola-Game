@@ -1,172 +1,116 @@
-// ================= CONFIG =================
-const SERVER_URL = "wss://python-tambola.onrender.com";
-
-let ws = null;
+const WS_URL = "wss://python-tambola.onrender.com";
+let socket = new WebSocket(WS_URL);
 let isHost = false;
 
+// ---------------- SCREEN ----------------
 
-// ================= SCREEN UTILITY =================
-function showScreen(screenId) {
+function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s =>
     s.classList.remove("active")
   );
-  document.getElementById(screenId).classList.add("active");
+  document.getElementById(id).classList.add("active");
 }
 
+// ---------------- SOCKET ----------------
 
-// ================= CONNECT SOCKET =================
-function connectSocket() {
-  ws = new WebSocket(SERVER_URL);
+socket.onopen = () => {
+  console.log("WebSocket connected");
+};
 
-  ws.onopen = () => {
-    console.log("✅ WebSocket connected");
-  };
+socket.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  handleEvent(msg.type, msg.data);
+};
 
-  ws.onmessage = (event) => {
-    console.log("📩 RAW:", event.data);
+// ---------------- EVENTS ----------------
 
-    let msg;
-    try {
-      msg = JSON.parse(event.data);
-    } catch (e) {
-      console.error("❌ Invalid JSON", e);
-      return;
-    }
+function handleEvent(type, data) {
 
-    console.log("📦 PARSED:", msg);
-    handleServerEvent(msg.type, msg.data);
-  };
+  if (type === "ROOM_CREATED") {
+    document.getElementById("room-id").innerText = data.room_id;
+    isHost = true;
+    showScreen("waiting-screen");
+  }
 
-  ws.onerror = (err) => {
-    console.error("❌ WebSocket error", err);
-    alert("WebSocket connection failed");
-  };
+  if (type === "PLAYER_LIST") {
+    const ul = document.getElementById("players-list");
+    ul.innerHTML = "";
+    data.players.forEach(p => {
+      const li = document.createElement("li");
+      li.innerText = p;
+      ul.appendChild(li);
+    });
+  }
 
-  ws.onclose = () => {
-    console.warn("⚠️ WebSocket closed");
-  };
-}
+  if (type === "TICKET_ASSIGNED") {
+    renderTicket(data.ticket);
+  }
 
+  if (type === "NUMBER_DRAWN") {
+    document.getElementById("current-number").innerText = data.number;
+    updateScores(data.scores);
+  }
 
-// ================= HANDLE SERVER EVENTS =================
-function handleServerEvent(type, data) {
-
-  switch (type) {
-
-    case "ROOM_CREATED":
-      document.getElementById("room-id").innerText = data.room_id;
-      isHost = true;
-      showScreen("waiting-screen");
-      break;
-
-    case "PLAYER_JOINED":
-      updatePlayerList(data.players);
-      break;
-
-    case "GAME_STARTED":
-      showScreen("game-screen");
-      break;
-
-    case "NUMBER_DRAWN":
-      document.getElementById("current-number").innerText = data.number;
-      updateScores(data.scores);
-      break;
-
-    case "GAME_OVER":
-      updateLeaderboard(data);
-      showScreen("leaderboard-screen");
-      break;
-
-    default:
-      console.warn("⚠️ Unknown event:", type);
+  if (type === "GAME_OVER") {
+    const ul = document.getElementById("leaderboard");
+    ul.innerHTML = "";
+    data.leaderboard.forEach(p => {
+      const li = document.createElement("li");
+      li.innerText = `${p.name} : ${p.score}`;
+      ul.appendChild(li);
+    });
+    showScreen("leaderboard-screen");
   }
 }
 
+// ---------------- UI HELPERS ----------------
 
-// ================= SEND TO SERVER =================
-function send(type, data = {}) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    alert("Server not connected yet");
-    console.error("❌ WebSocket not OPEN");
-    return;
-  }
-
-  ws.send(JSON.stringify({ type, data }));
-}
-
-
-// ================= UI HELPERS =================
-function updatePlayerList(players) {
-  const ul = document.getElementById("player-list");
-  ul.innerHTML = "";
-
-  players.forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = p;
-    ul.appendChild(li);
+function renderTicket(ticket) {
+  const box = document.getElementById("ticket-box");
+  box.innerHTML = "";
+  ticket.forEach(n => {
+    const span = document.createElement("span");
+    span.innerText = n;
+    box.appendChild(span);
   });
 }
 
 function updateScores(scores) {
   const ul = document.getElementById("score-list");
   ul.innerHTML = "";
-
-  Object.entries(scores).forEach(([name, score]) => {
+  for (const p in scores) {
     const li = document.createElement("li");
-    li.innerText = `${name}: ${score}`;
+    li.innerText = `${p}: ${scores[p]}`;
     ul.appendChild(li);
-  });
+  }
 }
 
-function updateLeaderboard(leaderboard) {
-  const ol = document.getElementById("leaderboard-list");
-  ol.innerHTML = "";
+// ---------------- BUTTONS ----------------
 
-  leaderboard.forEach(([name, score], index) => {
-    const li = document.createElement("li");
-    li.innerText = `${index + 1}. ${name} — ${score} pts`;
-    ol.appendChild(li);
-  });
-}
+document.getElementById("create-room-btn").onclick = () => {
+  const name = document.getElementById("player-name").value.trim();
+  if (!name) return alert("Enter name");
 
+  socket.send(JSON.stringify({
+    type: "CREATE_ROOM",
+    data: { player_name: name }
+  }));
+};
 
-// ================= BUTTON HANDLERS =================
-document.addEventListener("DOMContentLoaded", () => {
-  connectSocket();
+document.getElementById("join-room-btn").onclick = () => {
+  const name = document.getElementById("player-name").value.trim();
+  const room = document.getElementById("room-input").value.trim();
+  if (!name || !room) return alert("Missing");
 
-  document.getElementById("create-room-btn").onclick = () => {
-    const name = document.getElementById("player-name").value.trim();
-    if (!name) return alert("Enter your name");
+  socket.send(JSON.stringify({
+    type: "JOIN_ROOM",
+    data: { player_name: name, room_id: room }
+  }));
 
-    send("CREATE_ROOM", { player_name: name });
-  };
+  showScreen("waiting-screen");
+};
 
-  document.getElementById("join-room-btn").onclick = () => {
-    const name = document.getElementById("player-name").value.trim();
-    const roomId = document.getElementById("room-input").value.trim();
-
-    if (!name || !roomId) {
-      return alert("Enter name & room ID");
-    }
-
-    send("JOIN_ROOM", {
-      room_id: roomId,
-      player_name: name
-    });
-
-    showScreen("waiting-screen");
-  };
-
-  document.getElementById("start-game-btn").onclick = () => {
-    if (!isHost) {
-      alert("Only host can start the game");
-      return;
-    }
-
-    send("START_GAME");
-  };
-
-  document.getElementById("play-again-btn").onclick = () => {
-    window.location.reload();
-  };
-});
+document.getElementById("start-game-btn").onclick = () => {
+  if (!isHost) return;
+  socket.send(JSON.stringify({ type: "START_GAME" }));
+};
