@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from game_screen import GameScreen
 
+
 class LobbyScreen:
     def __init__(self, root, client):
         self.root = root
@@ -61,6 +62,7 @@ class LobbyScreen:
         })
 
     def start_game(self):
+        print("START GAME BUTTON CLICKED")
         self.client.send("START_GAME")
 
     def on_room_created(self, data):
@@ -68,10 +70,7 @@ class LobbyScreen:
         self.start_btn.config(state=tk.NORMAL)
         self.room_entry.delete(0, tk.END)
         self.room_entry.insert(0, data["room_id"])
-        messagebox.showinfo(
-            "Room Created",
-            f"Room ID: {data['room_id']}"
-        )
+        messagebox.showinfo("Room Created", f"Room ID: {data['room_id']}")
 
     def on_game_started(self, data):
         GameScreen(self.root, self.client, self.is_host)

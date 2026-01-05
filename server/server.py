@@ -6,8 +6,8 @@ import websockets
 
 rooms = {}
 
-GAME_DURATION = 180       # seconds
-DRAW_INTERVAL = 2         # seconds
+GAME_DURATION = 180      # 3 minutes
+DRAW_INTERVAL = 2        # seconds
 NUMBER_POOL = list(range(1, 101))
 
 
@@ -50,50 +50,47 @@ async def game_timer(room: Room):
     await asyncio.sleep(2)  # allow clients to open game screen
     start_time = time.time()
 
-    try:
-        while time.time() - start_time < GAME_DURATION:
-            await asyncio.sleep(DRAW_INTERVAL)
+    while time.time() - start_time < GAME_DURATION:
+        await asyncio.sleep(DRAW_INTERVAL)
 
-            remaining = list(set(NUMBER_POOL) - room.used_numbers)
-            if not remaining:
-                break
+        remaining = list(set(NUMBER_POOL) - room.used_numbers)
+        if not remaining:
+            break
 
-            number = random.choice(remaining)
-            room.used_numbers.add(number)
+        number = random.choice(remaining)
+        room.used_numbers.add(number)
 
-            for name, nums in room.player_numbers.items():
-                if number in nums:
-                    room.scores[name] += 2
-                    for row in room.player_rows[name]:
-                        if number in row:
-                            row.remove(number)
-                            if len(row) == 0:
-                                room.scores[name] += 5
-
-            await room.broadcast({
-                "type": "NUMBER_DRAWN",
-                "data": {
-                    "number": number,
-                    "scores": room.scores
-                }
-            })
-
-            # 🔑 IMPORTANT: yield control explicitly
-            await asyncio.sleep(0)
-
-    finally:
-        leaderboard = sorted(
-            room.scores.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        for name, nums in room.player_numbers.items():
+            if number in nums:
+                room.scores[name] += 2
+                for row in room.player_rows[name]:
+                    if number in row:
+                        row.remove(number)
+                        if len(row) == 0:
+                            room.scores[name] += 5
 
         await room.broadcast({
-            "type": "GAME_OVER",
+            "type": "NUMBER_DRAWN",
             "data": {
-                "leaderboard": leaderboard
+                "number": number,
+                "scores": room.scores
             }
         })
+
+        await asyncio.sleep(0)
+
+    leaderboard = sorted(
+        room.scores.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    await room.broadcast({
+        "type": "GAME_OVER",
+        "data": {
+            "leaderboard": leaderboard
+        }
+    })
 
 
 async def handle_message(ws, msg):
@@ -137,6 +134,13 @@ async def handle_message(ws, msg):
             return
 
         room.started = True
+
+        # 🔥 THIS WAS MISSING — SEND GAME_STARTED
+        await room.broadcast({
+            "type": "GAME_STARTED",
+            "data": {}
+        })
+
         room.timer_task = asyncio.create_task(game_timer(room))
 
 
