@@ -2,15 +2,19 @@ import asyncio
 import json
 import random
 import time
+import os
 import websockets
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 rooms = {}
 
-GAME_DURATION = 180      # 3 minutes
-DRAW_INTERVAL = 2        # seconds
+GAME_DURATION = 180
+DRAW_INTERVAL = 2
 NUMBER_POOL = list(range(1, 101))
 
 
+# ---------------- SAFE SEND ----------------
 async def safe_send(ws, msg):
     try:
         await ws.send(json.dumps(msg))
@@ -18,6 +22,7 @@ async def safe_send(ws, msg):
         pass
 
 
+# ---------------- ROOM ----------------
 class Room:
     def __init__(self, room_id, host_ws, host_name):
         self.room_id = room_id
@@ -28,7 +33,6 @@ class Room:
         self.scores = {host_name: 0}
         self.used_numbers = set()
         self.started = False
-        self.timer_task = None
 
         self._generate_ticket(host_name)
 
@@ -46,8 +50,9 @@ class Room:
             await safe_send(ws, msg)
 
 
+# ---------------- GAME TIMER ----------------
 async def game_timer(room: Room):
-    await asyncio.sleep(2)  # allow clients to open game screen
+    await asyncio.sleep(2)
     start_time = time.time()
 
     while time.time() - start_time < GAME_DURATION:
@@ -71,28 +76,17 @@ async def game_timer(room: Room):
 
         await room.broadcast({
             "type": "NUMBER_DRAWN",
-            "data": {
-                "number": number,
-                "scores": room.scores
-            }
+            "data": {"number": number, "scores": room.scores}
         })
 
-        await asyncio.sleep(0)
-
-    leaderboard = sorted(
-        room.scores.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
-
+    leaderboard = sorted(room.scores.items(), key=lambda x: x[1], reverse=True)
     await room.broadcast({
         "type": "GAME_OVER",
-        "data": {
-            "leaderboard": leaderboard
-        }
+        "data": {"leaderboard": leaderboard}
     })
 
 
+# ---------------- WS HANDLER ----------------
 async def handle_message(ws, msg):
     msg_type = msg.get("type")
     data = msg.get("data", {})
@@ -105,46 +99,26 @@ async def handle_message(ws, msg):
 
     if msg_type == "CREATE_ROOM":
         room_id = ''.join(random.choices("ABCDEFGH123456789", k=6))
-        room = Room(room_id, ws, data["player_name"])
-        rooms[room_id] = room
-
-        await safe_send(ws, {
-            "type": "ROOM_CREATED",
-            "data": {"room_id": room_id}
-        })
+        rooms[room_id] = Room(room_id, ws, data["player_name"])
+        await safe_send(ws, {"type": "ROOM_CREATED", "data": {"room_id": room_id}})
 
     elif msg_type == "JOIN_ROOM":
-        room_id = data["room_id"]
-        name = data["player_name"]
-
-        if room_id not in rooms:
-            await safe_send(ws, {
-                "type": "ERROR",
-                "data": {"message": "ROOM_NOT_FOUND"}
-            })
+        room = rooms.get(data["room_id"])
+        if not room:
             return
-
-        room = rooms[room_id]
-        room.players[ws] = name
-        room.scores[name] = 0
-        room._generate_ticket(name)
+        room.players[ws] = data["player_name"]
+        room.scores[data["player_name"]] = 0
+        room._generate_ticket(data["player_name"])
 
     elif msg_type == "START_GAME":
-        if not room or ws != room.host or room.started:
+        if ws != room.host or room.started:
             return
-
         room.started = True
-
-        # 🔥 THIS WAS MISSING — SEND GAME_STARTED
-        await room.broadcast({
-            "type": "GAME_STARTED",
-            "data": {}
-        })
-
-        room.timer_task = asyncio.create_task(game_timer(room))
+        await room.broadcast({"type": "GAME_STARTED", "data": {}})
+        asyncio.create_task(game_timer(room))
 
 
-async def handler(ws):
+async def ws_handler(ws):
     try:
         async for message in ws:
             await handle_message(ws, json.loads(message))
@@ -152,11 +126,31 @@ async def handler(ws):
         pass
 
 
-async def main():
-    async with websockets.serve(handler, "0.0.0.0", 8765):
-        print("WebSocket Server running on port 8765")
-        await asyncio.Future()
+# ---------------- HTTP HEALTH CHECK ----------------
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
+
+def start_http_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
+
+
+# ---------------- MAIN ----------------
+async def start_ws():
+    await websockets.serve(ws_handler, "0.0.0.0", 8765)
+    print("WebSocket Server running on port 8765")
+    await asyncio.Future()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    threading.Thread(target=start_http_server, daemon=True).start()
+    asyncio.run(start_ws())
