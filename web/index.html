@@ -7,62 +7,57 @@
 </head>
 <body>
 
-  <div id="app">
+<div id="app">
 
-    <!-- LOBBY -->
-    <section id="lobby-screen" class="screen active">
-      <h1>Tambola</h1>
+  <!-- LOBBY -->
+  <section id="lobby-screen" class="screen active">
+    <h1>Tambola</h1>
+    <div class="card">
+      <input id="player-name" placeholder="Enter your name" />
+      <button id="create-room-btn">Create Room</button>
+      <hr />
+      <input id="room-input" placeholder="Enter Room ID" />
+      <button id="join-room-btn">Join Room</button>
+    </div>
+  </section>
+
+  <!-- WAITING -->
+  <section id="waiting-screen" class="screen">
+    <h2>Waiting Room</h2>
+    <p>Room ID: <strong id="room-id">----</strong></p>
+    <div class="card">
+      <h3>Players</h3>
+      <ul id="players-list"></ul>
+    </div>
+    <button id="start-game-btn">Start Game</button>
+  </section>
+
+  <!-- GAME -->
+  <section id="game-screen" class="screen">
+    <h2>Current Number</h2>
+    <div id="current-number">--</div>
+
+    <button id="draw-btn" style="display:none;">Draw Number</button>
+
+    <div class="layout">
+      <div class="card">
+        <h3>Your Ticket</h3>
+        <div id="ticket" class="ticket-grid"></div>
+
+        <!-- CLAIM BUTTONS -->
+        <button id="claim-line-btn">Claim Line</button>
+        <button id="claim-tambola-btn">Claim Tambola</button>
+      </div>
 
       <div class="card">
-        <input id="player-name" placeholder="Enter your name" />
-        <button id="create-room-btn">Create Room</button>
-
-        <hr />
-
-        <input id="room-input" placeholder="Enter Room ID" />
-        <button id="join-room-btn">Join Room</button>
+        <h3>Scores</h3>
+        <ul id="score-list"></ul>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- WAITING -->
-    <section id="waiting-screen" class="screen">
-      <h2>Waiting Room</h2>
-      <p>Room ID: <strong id="room-id">----</strong></p>
+</div>
 
-      <div class="card">
-        <h3>Players</h3>
-        <ul id="players-list"></ul>
-      </div>
-
-      <button id="start-game-btn">Start Game</button>
-    </section>
-
-    <!-- GAME -->
-    <section id="game-screen" class="screen">
-      <h2>Current Number</h2>
-
-      <div id="current-number">--</div>
-
-      <!-- HOST ONLY -->
-      <button id="draw-btn" style="display:none;">Draw Number</button>
-
-      <div class="layout">
-        <div class="card">
-          <h3>Your Ticket</h3>
-          <div id="ticket" class="ticket-grid"></div>
-        </div>
-
-        <div class="card">
-          <h3>Scores</h3>
-          <ul id="score-list">
-            <li>No scores yet</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-  </div>
-
-  <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

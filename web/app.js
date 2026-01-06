@@ -2,6 +2,7 @@ const WS_URL = "wss://python-tambola.onrender.com";
 const socket = new WebSocket(WS_URL);
 
 let isHost = false;
+let myTicket = [];
 
 /* SCREEN */
 function showScreen(id) {
@@ -13,10 +14,11 @@ function showScreen(id) {
 
 /* TICKET */
 function renderTicket(ticket) {
+  myTicket = ticket;
   const ticketDiv = document.getElementById("ticket");
   ticketDiv.innerHTML = "";
 
-  ticket.forEach(row => {
+  ticket.forEach((row, r) => {
     const rowDiv = document.createElement("div");
     rowDiv.className = "ticket-row";
 
@@ -29,12 +31,8 @@ function renderTicket(ticket) {
         cell.className = "ticket-cell";
         cell.innerText = num;
         cell.dataset.number = num;
-
-        cell.onclick = () => {
-          cell.classList.toggle("marked");
-        };
+        cell.onclick = () => cell.classList.toggle("marked");
       }
-
       rowDiv.appendChild(cell);
     });
 
@@ -72,9 +70,7 @@ function handleEvent(type, data) {
 
   if (type === "GAME_STARTED") {
     showScreen("game-screen");
-    if (isHost) {
-      document.getElementById("draw-btn").style.display = "block";
-    }
+    if (isHost) document.getElementById("draw-btn").style.display = "block";
   }
 
   if (type === "NUMBER_DRAWN") {
@@ -87,37 +83,31 @@ function handleEvent(type, data) {
       }
     });
   }
+
+  if (type === "SCORE_UPDATE") {
+    const ul = document.getElementById("score-list");
+    ul.innerHTML = "";
+    Object.entries(data.scores).forEach(([p, s]) => {
+      const li = document.createElement("li");
+      li.innerText = `${p}: ${s}`;
+      ul.appendChild(li);
+    });
+  }
+
+  if (type === "CLAIM_RESULT") {
+    alert(data.message);
+  }
 }
 
 /* BUTTONS */
-document.getElementById("create-room-btn").onclick = () => {
-  const name = document.getElementById("player-name").value.trim();
-  if (!name) return alert("Enter name");
-
-  socket.send(JSON.stringify({
-    type: "CREATE_ROOM",
-    data: { player_name: name }
-  }));
-};
-
-document.getElementById("join-room-btn").onclick = () => {
-  const name = document.getElementById("player-name").value.trim();
-  const room = document.getElementById("room-input").value.trim();
-  if (!name || !room) return alert("Enter all fields");
-
-  socket.send(JSON.stringify({
-    type: "JOIN_ROOM",
-    data: { player_name: name, room_id: room }
-  }));
-
-  showScreen("waiting-screen");
-};
-
-document.getElementById("start-game-btn").onclick = () => {
-  if (!isHost) return;
-  socket.send(JSON.stringify({ type: "START_GAME" }));
-};
-
 document.getElementById("draw-btn").onclick = () => {
   socket.send(JSON.stringify({ type: "DRAW_NUMBER" }));
+};
+
+document.getElementById("claim-line-btn").onclick = () => {
+  socket.send(JSON.stringify({ type: "CLAIM_LINE" }));
+};
+
+document.getElementById("claim-tambola-btn").onclick = () => {
+  socket.send(JSON.stringify({ type: "CLAIM_TAMBOLA" }));
 };
