@@ -2,7 +2,6 @@ const WS_URL = "wss://python-tambola.onrender.com";
 const socket = new WebSocket(WS_URL);
 
 let isHost = false;
-let myTicket = [];
 
 /* SCREEN */
 function showScreen(id) {
@@ -14,11 +13,10 @@ function showScreen(id) {
 
 /* TICKET */
 function renderTicket(ticket) {
-  myTicket = ticket;
   const ticketDiv = document.getElementById("ticket");
   ticketDiv.innerHTML = "";
 
-  ticket.forEach((row, r) => {
+  ticket.forEach(row => {
     const rowDiv = document.createElement("div");
     rowDiv.className = "ticket-row";
 
@@ -31,17 +29,15 @@ function renderTicket(ticket) {
         cell.className = "ticket-cell";
         cell.innerText = num;
         cell.dataset.number = num;
-        cell.onclick = () => cell.classList.toggle("marked");
       }
       rowDiv.appendChild(cell);
     });
-
     ticketDiv.appendChild(rowDiv);
   });
 }
 
 /* SOCKET */
-socket.onmessage = (e) => {
+socket.onmessage = e => {
   const msg = JSON.parse(e.data);
   handleEvent(msg.type, msg.data);
 };
@@ -74,11 +70,9 @@ function handleEvent(type, data) {
   }
 
   if (type === "NUMBER_DRAWN") {
-    const number = data.number;
-    document.getElementById("current-number").innerText = number;
-
+    document.getElementById("current-number").innerText = data.number;
     document.querySelectorAll(".ticket-cell").forEach(cell => {
-      if (cell.dataset.number == number) {
+      if (cell.dataset.number == data.number) {
         cell.classList.add("marked");
       }
     });
@@ -87,15 +81,24 @@ function handleEvent(type, data) {
   if (type === "SCORE_UPDATE") {
     const ul = document.getElementById("score-list");
     ul.innerHTML = "";
-    Object.entries(data.scores).forEach(([p, s]) => {
+    Object.entries(data.scores).forEach(([p,s])=>{
       const li = document.createElement("li");
       li.innerText = `${p}: ${s}`;
       ul.appendChild(li);
     });
   }
 
-  if (type === "CLAIM_RESULT") {
-    alert(data.message);
+  if (type === "GAME_ENDED") {
+    const list = document.getElementById("leaderboard-list");
+    list.innerHTML = "";
+
+    data.leaderboard.forEach(p => {
+      const li = document.createElement("li");
+      li.innerText = `${p.name} — ${p.score}`;
+      list.appendChild(li);
+    });
+
+    showScreen("leaderboard-screen");
   }
 }
 
