@@ -3,7 +3,7 @@ const socket = new WebSocket(WS_URL);
 
 let isHost = false;
 
-/* ---------- SCREEN ---------- */
+/* SCREEN */
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s =>
     s.classList.remove("active")
@@ -11,7 +11,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
-/* ---------- TICKET ---------- */
+/* TICKET */
 function renderTicket(ticket) {
   const ticketDiv = document.getElementById("ticket");
   ticketDiv.innerHTML = "";
@@ -28,7 +28,11 @@ function renderTicket(ticket) {
       } else {
         cell.className = "ticket-cell";
         cell.innerText = num;
-        cell.onclick = () => cell.classList.toggle("marked");
+        cell.dataset.number = num;
+
+        cell.onclick = () => {
+          cell.classList.toggle("marked");
+        };
       }
 
       rowDiv.appendChild(cell);
@@ -38,7 +42,7 @@ function renderTicket(ticket) {
   });
 }
 
-/* ---------- SOCKET ---------- */
+/* SOCKET */
 socket.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   handleEvent(msg.type, msg.data);
@@ -68,18 +72,24 @@ function handleEvent(type, data) {
 
   if (type === "GAME_STARTED") {
     showScreen("game-screen");
-
     if (isHost) {
       document.getElementById("draw-btn").style.display = "block";
     }
   }
 
   if (type === "NUMBER_DRAWN") {
-    document.getElementById("current-number").innerText = data.number;
+    const number = data.number;
+    document.getElementById("current-number").innerText = number;
+
+    document.querySelectorAll(".ticket-cell").forEach(cell => {
+      if (cell.dataset.number == number) {
+        cell.classList.add("marked");
+      }
+    });
   }
 }
 
-/* ---------- BUTTONS ---------- */
+/* BUTTONS */
 document.getElementById("create-room-btn").onclick = () => {
   const name = document.getElementById("player-name").value.trim();
   if (!name) return alert("Enter name");
