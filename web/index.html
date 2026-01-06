@@ -9,25 +9,39 @@
 
   <div id="app">
 
-    <!-- ============ LOBBY SCREEN ============ -->
+    <!-- ================= LOBBY SCREEN ================= -->
     <section id="lobby-screen" class="screen active">
       <h1>Tambola</h1>
 
       <div class="card">
-        <input id="player-name" placeholder="Enter your name" />
+        <input
+          type="text"
+          id="player-name"
+          placeholder="Enter your name"
+        />
+
         <button id="create-room-btn">Create Room</button>
 
         <hr />
 
-        <input id="room-input" placeholder="Enter Room ID" />
+        <input
+          type="text"
+          id="room-input"
+          placeholder="Enter Room ID"
+        />
+
         <button id="join-room-btn">Join Room</button>
       </div>
     </section>
 
-    <!-- ============ WAITING ROOM ============ -->
+    <!-- ================= WAITING ROOM ================= -->
     <section id="waiting-screen" class="screen">
       <h2>Waiting Room</h2>
-      <p>Room ID: <strong id="room-id">----</strong></p>
+
+      <p>
+        Room ID:
+        <strong id="room-id">----</strong>
+      </p>
 
       <div class="card">
         <h3>Players</h3>
@@ -37,10 +51,16 @@
       <button id="start-game-btn">Start Game</button>
     </section>
 
-    <!-- ============ GAME SCREEN ============ -->
+    <!-- ================= GAME SCREEN ================= -->
     <section id="game-screen" class="screen">
       <h2>Current Number</h2>
+
       <div id="current-number">--</div>
+
+      <!-- HOST ONLY BUTTON -->
+      <button id="draw-btn" style="display:none;">
+        Draw Number
+      </button>
 
       <div class="layout">
         <div class="card">
