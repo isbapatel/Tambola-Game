@@ -3,48 +3,43 @@ const socket = new WebSocket(WS_URL);
 
 let isHost = false;
 
-/* ---------- DEBUG ---------- */
-socket.onopen = () => console.log("✅ WebSocket connected");
-socket.onerror = e => console.error("❌ WS error", e);
-socket.onclose = () => console.warn("⚠️ WS closed");
+/* DEBUG */
+socket.onopen = () => console.log("WS connected");
+socket.onerror = e => console.error(e);
 
-/* ---------- SCREEN ---------- */
+/* SCREEN */
 function showScreen(id) {
-  document.querySelectorAll(".screen").forEach(s =>
-    s.classList.remove("active")
-  );
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-/* ---------- TICKET ---------- */
+/* TICKET */
 function renderTicket(ticket) {
-  const ticketDiv = document.getElementById("ticket");
-  ticketDiv.innerHTML = "";
+  const div = document.getElementById("ticket");
+  div.innerHTML = "";
 
   ticket.forEach(row => {
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "ticket-row";
+    const r = document.createElement("div");
+    r.className = "ticket-row";
 
-    row.forEach(num => {
-      const cell = document.createElement("div");
-      if (num === 0) {
-        cell.className = "ticket-cell empty";
+    row.forEach(n => {
+      const c = document.createElement("div");
+      if (n === 0) {
+        c.className = "ticket-cell empty";
       } else {
-        cell.className = "ticket-cell";
-        cell.innerText = num;
-        cell.dataset.number = num;
+        c.className = "ticket-cell";
+        c.innerText = n;
+        c.dataset.number = n;
       }
-      rowDiv.appendChild(cell);
+      r.appendChild(c);
     });
-
-    ticketDiv.appendChild(rowDiv);
+    div.appendChild(r);
   });
 }
 
-/* ---------- SOCKET EVENTS ---------- */
+/* SOCKET EVENTS */
 socket.onmessage = e => {
-  const msg = JSON.parse(e.data);
-  const { type, data } = msg;
+  const { type, data } = JSON.parse(e.data);
 
   if (type === "ROOM_CREATED") {
     document.getElementById("room-id").innerText = data.room_id;
@@ -62,9 +57,7 @@ socket.onmessage = e => {
     });
   }
 
-  if (type === "TICKET_ASSIGNED") {
-    renderTicket(data.ticket);
-  }
+  if (type === "TICKET_ASSIGNED") renderTicket(data.ticket);
 
   if (type === "GAME_STARTED") {
     showScreen("game-screen");
@@ -73,66 +66,62 @@ socket.onmessage = e => {
 
   if (type === "NUMBER_DRAWN") {
     document.getElementById("current-number").innerText = data.number;
-    document.querySelectorAll(".ticket-cell").forEach(cell => {
-      if (cell.dataset.number == data.number) {
-        cell.classList.add("marked");
-      }
+    document.querySelectorAll(".ticket-cell").forEach(c => {
+      if (c.dataset.number == data.number) c.classList.add("marked");
     });
   }
 
   if (type === "SCORE_UPDATE") {
     const ul = document.getElementById("score-list");
     ul.innerHTML = "";
-    Object.entries(data.scores).forEach(([p, s]) => {
+    Object.entries(data.scores).forEach(([p,s]) => {
       const li = document.createElement("li");
       li.innerText = `${p}: ${s}`;
       ul.appendChild(li);
     });
   }
 
-  if (type === "CLAIM_RESULT") {
-    alert(data.message);
+  if (type === "CLAIM_RESULT") alert(data.message);
+
+  if (type === "GAME_ENDED") {
+    const ol = document.getElementById("leaderboard-list");
+    ol.innerHTML = "";
+    data.leaderboard.forEach(p => {
+      const li = document.createElement("li");
+      li.innerText = `${p.name} - ${p.score}`;
+      ol.appendChild(li);
+    });
+    showScreen("leaderboard-screen");
   }
 };
 
-/* ---------- BUTTON HANDLERS (🔥 THIS WAS MISSING) ---------- */
-
+/* BUTTONS */
 document.getElementById("create-room-btn").onclick = () => {
-  const name = document.getElementById("player-name").value.trim();
-  if (!name) return alert("Enter name");
-
-  socket.send(JSON.stringify({
-    type: "CREATE_ROOM",
-    data: { player_name: name }
-  }));
+  const n = document.getElementById("player-name").value.trim();
+  if (!n) return alert("Enter name");
+  socket.send(JSON.stringify({ type:"CREATE_ROOM", data:{player_name:n} }));
 };
 
 document.getElementById("join-room-btn").onclick = () => {
-  const name = document.getElementById("player-name").value.trim();
-  const room = document.getElementById("room-input").value.trim();
-  if (!name || !room) return alert("Enter all fields");
-
-  socket.send(JSON.stringify({
-    type: "JOIN_ROOM",
-    data: { player_name: name, room_id: room }
-  }));
-
+  const n = document.getElementById("player-name").value.trim();
+  const r = document.getElementById("room-input").value.trim();
+  if (!n || !r) return alert("Fill all");
+  socket.send(JSON.stringify({ type:"JOIN_ROOM", data:{player_name:n, room_id:r} }));
   showScreen("waiting-screen");
 };
 
 document.getElementById("start-game-btn").onclick = () => {
-  if (!isHost) return;
-  socket.send(JSON.stringify({ type: "START_GAME" }));
+  if (isHost) socket.send(JSON.stringify({ type:"START_GAME" }));
 };
 
 document.getElementById("draw-btn").onclick = () => {
-  socket.send(JSON.stringify({ type: "DRAW_NUMBER" }));
+  socket.send(JSON.stringify({ type:"DRAW_NUMBER" }));
 };
 
 document.getElementById("claim-line-btn").onclick = () => {
-  socket.send(JSON.stringify({ type: "CLAIM_LINE" }));
+  socket.send(JSON.stringify({ type:"CLAIM_LINE" }));
 };
 
 document.getElementById("claim-tambola-btn").onclick = () => {
-  socket.send(JSON.stringify({ type: "CLAIM_TAMBOLA" }));
+  socket.send(JSON.stringify({ type:"CLAIM_TAMBOLA" }));
 };
