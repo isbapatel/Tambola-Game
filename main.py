@@ -2,7 +2,7 @@ import tkinter as tk
 from lobby import LobbyScreen
 from client_adapter import TambolaClient
 
-SERVER_URI = "ws://localhost:8765"
+SERVER_URI = "wss://python-tambola.onrender.com"
 
 def main():
     root = tk.Tk()
