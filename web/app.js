@@ -3,7 +3,7 @@ const socket = new WebSocket(WS_URL);
 
 let isHost = false;
 
-/* -------- SCREENS -------- */
+/* ---------- SCREEN ---------- */
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s =>
     s.classList.remove("active")
@@ -11,13 +11,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
-/* -------- TEMP TICKET -------- */
-const dummyTicket = [
-  [0, 12, 0, 34, 0, 56, 0, 78, 90],
-  [1, 0, 23, 0, 45, 0, 67, 0, 89],
-  [0, 11, 0, 33, 0, 55, 0, 77, 0]
-];
-
+/* ---------- TICKET ---------- */
 function renderTicket(ticket) {
   const ticketDiv = document.getElementById("ticket");
   ticketDiv.innerHTML = "";
@@ -44,7 +38,7 @@ function renderTicket(ticket) {
   });
 }
 
-/* -------- SOCKET -------- */
+/* ---------- SOCKET ---------- */
 socket.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   handleEvent(msg.type, msg.data);
@@ -68,13 +62,16 @@ function handleEvent(type, data) {
     });
   }
 
+  if (type === "TICKET_ASSIGNED") {
+    renderTicket(data.ticket);
+  }
+
   if (type === "GAME_STARTED") {
     showScreen("game-screen");
-    renderTicket(dummyTicket); // TEMP
   }
 }
 
-/* -------- BUTTONS -------- */
+/* ---------- BUTTONS ---------- */
 document.getElementById("create-room-btn").onclick = () => {
   const name = document.getElementById("player-name").value.trim();
   if (!name) return alert("Enter name");
