@@ -68,6 +68,14 @@ function handleEvent(type, data) {
 
   if (type === "GAME_STARTED") {
     showScreen("game-screen");
+
+    if (isHost) {
+      document.getElementById("draw-btn").style.display = "block";
+    }
+  }
+
+  if (type === "NUMBER_DRAWN") {
+    document.getElementById("current-number").innerText = data.number;
   }
 }
 
@@ -98,4 +106,8 @@ document.getElementById("join-room-btn").onclick = () => {
 document.getElementById("start-game-btn").onclick = () => {
   if (!isHost) return;
   socket.send(JSON.stringify({ type: "START_GAME" }));
+};
+
+document.getElementById("draw-btn").onclick = () => {
+  socket.send(JSON.stringify({ type: "DRAW_NUMBER" }));
 };
