@@ -7,11 +7,12 @@ import websockets
 
 PORT = int(os.environ.get("PORT", 10000))
 
-rooms = {}  
+rooms = {}
 # room_id -> {
 #   players: [],
 #   sockets: [],
-#   tickets: {}   # player_name -> ticket
+#   tickets: {},
+#   numbers_drawn: set()
 # }
 
 def generate_room_id():
@@ -20,15 +21,18 @@ def generate_room_id():
 
 def generate_ticket():
     ticket = [[0]*9 for _ in range(3)]
-
     for row in range(3):
         cols = random.sample(range(9), 5)
         for col in cols:
             start = col * 10 + 1
             end = 90 if col == 8 else start + 9
             ticket[row][col] = random.randint(start, end)
-
     return ticket
+
+
+async def broadcast(room_id, message):
+    for ws in rooms[room_id]["sockets"]:
+        await ws.send(json.dumps(message))
 
 
 async def handler(ws):
@@ -49,7 +53,8 @@ async def handler(ws):
                 rooms[room_id] = {
                     "players": [player_name],
                     "sockets": [ws],
-                    "tickets": {}
+                    "tickets": {},
+                    "numbers_drawn": set()
                 }
 
                 await ws.send(json.dumps({
@@ -57,7 +62,10 @@ async def handler(ws):
                     "data": { "room_id": room_id }
                 }))
 
-                await broadcast_players(room_id)
+                await broadcast(room_id, {
+                    "type": "PLAYERS_UPDATE",
+                    "data": { "players": rooms[room_id]["players"] }
+                })
 
             # -------- JOIN ROOM --------
             elif msg_type == "JOIN_ROOM":
@@ -74,13 +82,15 @@ async def handler(ws):
                 rooms[room_id]["players"].append(player_name)
                 rooms[room_id]["sockets"].append(ws)
 
-                await broadcast_players(room_id)
+                await broadcast(room_id, {
+                    "type": "PLAYERS_UPDATE",
+                    "data": { "players": rooms[room_id]["players"] }
+                })
 
             # -------- START GAME --------
             elif msg_type == "START_GAME":
                 room = rooms[room_id]
 
-                # generate tickets
                 for i, player in enumerate(room["players"]):
                     ticket = generate_ticket()
                     room["tickets"][player] = ticket
@@ -90,12 +100,28 @@ async def handler(ws):
                         "data": { "ticket": ticket }
                     }))
 
-                # notify all game started
-                for s in room["sockets"]:
-                    await s.send(json.dumps({
-                        "type": "GAME_STARTED",
-                        "data": {}
-                    }))
+                await broadcast(room_id, {
+                    "type": "GAME_STARTED",
+                    "data": {}
+                })
+
+            # -------- DRAW NUMBER (HOST) --------
+            elif msg_type == "DRAW_NUMBER":
+                room = rooms[room_id]
+
+                if len(room["numbers_drawn"]) == 90:
+                    continue
+
+                number = random.randint(1, 90)
+                while number in room["numbers_drawn"]:
+                    number = random.randint(1, 90)
+
+                room["numbers_drawn"].add(number)
+
+                await broadcast(room_id, {
+                    "type": "NUMBER_DRAWN",
+                    "data": { "number": number }
+                })
 
     except websockets.ConnectionClosed:
         pass
@@ -107,18 +133,12 @@ async def handler(ws):
             rooms[room_id]["players"].pop(idx)
 
             if rooms[room_id]["sockets"]:
-                await broadcast_players(room_id)
+                await broadcast(room_id, {
+                    "type": "PLAYERS_UPDATE",
+                    "data": { "players": rooms[room_id]["players"] }
+                })
             else:
                 del rooms[room_id]
-
-
-async def broadcast_players(room_id):
-    players = rooms[room_id]["players"]
-    for ws in rooms[room_id]["sockets"]:
-        await ws.send(json.dumps({
-            "type": "PLAYERS_UPDATE",
-            "data": { "players": players }
-        }))
 
 
 async def main():
