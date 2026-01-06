@@ -1,8 +1,9 @@
 const WS_URL = "wss://python-tambola.onrender.com";
-let socket = new WebSocket(WS_URL);
+const socket = new WebSocket(WS_URL);
+
 let isHost = false;
 
-// ---------- SCREEN ----------
+/* -------- SCREENS -------- */
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s =>
     s.classList.remove("active")
@@ -10,17 +11,45 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
-// ---------- SOCKET ----------
-socket.onopen = () => {
-  console.log("Connected to backend");
-};
+/* -------- TEMP TICKET -------- */
+const dummyTicket = [
+  [0, 12, 0, 34, 0, 56, 0, 78, 90],
+  [1, 0, 23, 0, 45, 0, 67, 0, 89],
+  [0, 11, 0, 33, 0, 55, 0, 77, 0]
+];
 
+function renderTicket(ticket) {
+  const ticketDiv = document.getElementById("ticket");
+  ticketDiv.innerHTML = "";
+
+  ticket.forEach(row => {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "ticket-row";
+
+    row.forEach(num => {
+      const cell = document.createElement("div");
+
+      if (num === 0) {
+        cell.className = "ticket-cell empty";
+      } else {
+        cell.className = "ticket-cell";
+        cell.innerText = num;
+        cell.onclick = () => cell.classList.toggle("marked");
+      }
+
+      rowDiv.appendChild(cell);
+    });
+
+    ticketDiv.appendChild(rowDiv);
+  });
+}
+
+/* -------- SOCKET -------- */
 socket.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   handleEvent(msg.type, msg.data);
 };
 
-// ---------- EVENTS ----------
 function handleEvent(type, data) {
 
   if (type === "ROOM_CREATED") {
@@ -41,10 +70,11 @@ function handleEvent(type, data) {
 
   if (type === "GAME_STARTED") {
     showScreen("game-screen");
+    renderTicket(dummyTicket); // TEMP
   }
 }
 
-// ---------- BUTTONS ----------
+/* -------- BUTTONS -------- */
 document.getElementById("create-room-btn").onclick = () => {
   const name = document.getElementById("player-name").value.trim();
   if (!name) return alert("Enter name");
