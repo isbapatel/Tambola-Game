@@ -3,7 +3,7 @@ const socket = new WebSocket(WS_URL);
 
 let isHost = false;
 
-/* DEBUG */
+/* DEBUGiing*/
 socket.onopen = () => console.log("WS connected");
 socket.onerror = e => console.error(e);
 
