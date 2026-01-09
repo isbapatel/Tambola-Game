@@ -37,25 +37,31 @@
     <h2>Current Number</h2>
     <div id="current-number">--</div>
 
-    <button id="draw-btn" style="display:none;">Draw Number</button>
-
     <div class="layout">
+
       <div class="card">
         <h3>Your Ticket</h3>
         <div id="ticket" class="ticket-grid"></div>
 
-        <button id="claim-line-btn">Claim Line</button>
-        <button id="claim-tambola-btn">Claim Tambola</button>
+        <div class="claims">
+          <button onclick="claim('QUICK_5')">Quick 5</button>
+          <button onclick="claim('FOUR_CORNERS')">Four Corners</button>
+          <button onclick="claim('FIRST_LINE')">1st Line</button>
+          <button onclick="claim('SECOND_LINE')">2nd Line</button>
+          <button onclick="claim('THIRD_LINE')">3rd Line</button>
+          <button onclick="claim('TAMBOLA')">Tambola</button>
+        </div>
       </div>
 
       <div class="card">
         <h3>Scores</h3>
         <ul id="score-list"></ul>
       </div>
+
     </div>
   </section>
 
-  <!-- LEADERBOARD screen-->
+  <!-- LEADERBOARD -->
   <section id="leaderboard-screen" class="screen">
     <h2>Leaderboard</h2>
     <div class="card">

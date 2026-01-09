@@ -12,8 +12,8 @@ body {
 
 #app {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   min-height: 100vh;
 }
 
@@ -79,7 +79,7 @@ hr {
   gap: 20px;
 }
 
-/* TICKET logic*/
+/* Ticket */
 
 .ticket-grid {
   display: grid;
@@ -89,7 +89,7 @@ hr {
 
 .ticket-row {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
 }
 
@@ -101,15 +101,18 @@ hr {
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  cursor: pointer;
-}
-
-.ticket-cell.empty {
-  background: transparent;
-  cursor: default;
 }
 
 .ticket-cell.marked {
-  background: linear-gradient(135deg, #ff9800, #ff5722);
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
   color: #000;
+}
+
+/* Claims */
+
+.claims {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }

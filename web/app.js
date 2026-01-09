@@ -2,21 +2,21 @@ const WS_URL = "wss://python-tambola.onrender.com";
 const socket = new WebSocket(WS_URL);
 
 let isHost = false;
+let marked = new Set();
+let ticketFlat = [];
 
-/* DEBUGiing*/
-socket.onopen = () => console.log("WS connected");
-socket.onerror = e => console.error(e);
-
-/* SCREEN */
+/* Screen handling */
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-/* TICKET */
+/* Ticket render */
 function renderTicket(ticket) {
   const div = document.getElementById("ticket");
   div.innerHTML = "";
+  marked.clear();
+  ticketFlat = [];
 
   ticket.forEach(row => {
     const r = document.createElement("div");
@@ -24,20 +24,50 @@ function renderTicket(ticket) {
 
     row.forEach(n => {
       const c = document.createElement("div");
-      if (n === 0) {
-        c.className = "ticket-cell empty";
-      } else {
-        c.className = "ticket-cell";
-        c.innerText = n;
-        c.dataset.number = n;
-      }
+      c.className = "ticket-cell";
+      c.innerText = n;
+      c.dataset.number = n;
+      ticketFlat.push(n);
       r.appendChild(c);
     });
+
     div.appendChild(r);
   });
 }
 
-/* SOCKET EVENTS */
+/* Claim logic */
+function claim(type) {
+  let valid = false;
+
+  const rows = [
+    ticketFlat.slice(0,5),
+    ticketFlat.slice(5,10),
+    ticketFlat.slice(10,15)
+  ];
+
+  if (type === "QUICK_5") valid = marked.size >= 5;
+
+  if (type === "FOUR_CORNERS") {
+    valid = [
+      rows[0][0], rows[0][4],
+      rows[2][0], rows[2][4]
+    ].every(n => marked.has(n));
+  }
+
+  if (type === "FIRST_LINE") valid = rows[0].every(n => marked.has(n));
+  if (type === "SECOND_LINE") valid = rows[1].every(n => marked.has(n));
+  if (type === "THIRD_LINE") valid = rows[2].every(n => marked.has(n));
+  if (type === "TAMBOLA") valid = ticketFlat.every(n => marked.has(n));
+
+  if (!valid) return alert("❌ Invalid Claim");
+
+  socket.send(JSON.stringify({
+    type: "MAKE_CLAIM",
+    data: { claim: type }
+  }));
+}
+
+/* WebSocket events */
 socket.onmessage = e => {
   const { type, data } = JSON.parse(e.data);
 
@@ -59,15 +89,15 @@ socket.onmessage = e => {
 
   if (type === "TICKET_ASSIGNED") renderTicket(data.ticket);
 
-  if (type === "GAME_STARTED") {
-    showScreen("game-screen");
-    if (isHost) document.getElementById("draw-btn").style.display = "block";
-  }
+  if (type === "GAME_STARTED") showScreen("game-screen");
 
   if (type === "NUMBER_DRAWN") {
     document.getElementById("current-number").innerText = data.number;
     document.querySelectorAll(".ticket-cell").forEach(c => {
-      if (c.dataset.number == data.number) c.classList.add("marked");
+      if (c.dataset.number == data.number) {
+        c.classList.add("marked");
+        marked.add(Number(c.dataset.number));
+      }
     });
   }
 
@@ -95,7 +125,7 @@ socket.onmessage = e => {
   }
 };
 
-/* BUTTONS */
+/* Buttons */
 document.getElementById("create-room-btn").onclick = () => {
   const n = document.getElementById("player-name").value.trim();
   if (!n) return alert("Enter name");
@@ -112,16 +142,4 @@ document.getElementById("join-room-btn").onclick = () => {
 
 document.getElementById("start-game-btn").onclick = () => {
   if (isHost) socket.send(JSON.stringify({ type:"START_GAME" }));
-};
-
-document.getElementById("draw-btn").onclick = () => {
-  socket.send(JSON.stringify({ type:"DRAW_NUMBER" }));
-};
-
-document.getElementById("claim-line-btn").onclick = () => {
-  socket.send(JSON.stringify({ type:"CLAIM_LINE" }));
-};
-
-document.getElementById("claim-tambola-btn").onclick = () => {
-  socket.send(JSON.stringify({ type:"CLAIM_TAMBOLA" }));
 };
