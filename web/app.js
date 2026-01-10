@@ -23,18 +23,24 @@ function renderTicket(ticket) {
     r.className = "ticket-row";
 
     row.forEach(n => {
-      if (n === 0) return;
       const c = document.createElement("div");
-      c.className = "ticket-cell";
-      c.innerText = n;
-      c.dataset.number = n;
-      ticketFlat.push(n);
+
+      if (n === 0) {
+        c.className = "ticket-cell empty";
+        c.innerHTML = "&nbsp;";
+      } else {
+        c.className = "ticket-cell";
+        c.innerText = n;
+        c.dataset.number = n;
+        ticketFlat.push(n);
+      }
       r.appendChild(c);
     });
 
     div.appendChild(r);
   });
 }
+
 
 /* Claims */
 function claim(type) {

@@ -108,6 +108,13 @@ hr {
   color: #000;
 }
 
+
+.ticket-cell.empty {
+  background: transparent;
+  cursor: default;
+}
+
+
 /* Claims */
 
 .claims {
