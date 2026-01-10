@@ -123,3 +123,19 @@ hr {
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
+
+.claim-status{
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:14px 24px;
+  border-radius:12px;
+  font-weight:bold;
+  opacity:0;
+  transition:all .4s;
+}
+.claim-status.show{opacity:1;top:40px;}
+.claim-status.success{background:#2e7d32;}
+.claim-status.invalid{background:#b71c1c;}
+.claim-status.already{background:#f57c00;}

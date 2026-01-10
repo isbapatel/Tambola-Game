@@ -1,75 +1,56 @@
 const WS_URL = "wss://python-tambola.onrender.com";
 const socket = new WebSocket(WS_URL);
 
-let isHost = false;
-let marked = new Set();
-let ticketFlat = [];
+let isHost=false;
+let marked=new Set();
 
-/* Screen */
-function showScreen(id) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-/* Ticket */
-function renderTicket(ticket) {
-  const div = document.getElementById("ticket");
-  div.innerHTML = "";
+function renderTicket(ticket){
+  const div=document.getElementById("ticket");
+  div.innerHTML="";
   marked.clear();
-  ticketFlat = [];
 
-  ticket.forEach(row => {
-    const r = document.createElement("div");
-    r.className = "ticket-row";
-
-    row.forEach(n => {
-      const c = document.createElement("div");
-
-      if (n === 0) {
-        c.className = "ticket-cell empty";
-        c.innerHTML = "&nbsp;";
-      } else {
-        c.className = "ticket-cell";
-        c.innerText = n;
-        c.dataset.number = n;
-        ticketFlat.push(n);
+  ticket.forEach(row=>{
+    const r=document.createElement("div");
+    r.className="ticket-row";
+    row.forEach(n=>{
+      const c=document.createElement("div");
+      if(n===0){
+        c.className="ticket-cell empty";
+        c.innerHTML="&nbsp;";
+      }else{
+        c.className="ticket-cell";
+        c.innerText=n;
+        c.dataset.number=n;
       }
       r.appendChild(c);
     });
-
     div.appendChild(r);
   });
 }
 
-
-/* Claims */
-function claim(type) {
-  let valid=false;
-  const rows=[
-    ticketFlat.slice(0,5),
-    ticketFlat.slice(5,10),
-    ticketFlat.slice(10,15)
-  ];
-
-  if(type==="QUICK_5") valid=marked.size>=5;
-  if(type==="FOUR_CORNERS")
-    valid=[rows[0][0],rows[0][4],rows[2][0],rows[2][4]].every(n=>marked.has(n));
-  if(type==="FIRST_LINE") valid=rows[0].every(n=>marked.has(n));
-  if(type==="SECOND_LINE") valid=rows[1].every(n=>marked.has(n));
-  if(type==="THIRD_LINE") valid=rows[2].every(n=>marked.has(n));
-  if(type==="TAMBOLA") valid=ticketFlat.every(n=>marked.has(n));
-
-  if(!valid) return alert("Invalid Claim");
-
+function claim(type){
   socket.send(JSON.stringify({type:"MAKE_CLAIM",data:{claim:type}}));
 }
 
-/* WebSocket */
-socket.onmessage = e => {
+function showClaim(msg,cls){
+  const box=document.getElementById("claim-status");
+  box.className=`claim-status show ${cls}`;
+  box.innerText=msg;
+  setTimeout(()=>box.className="claim-status",2000);
+}
+
+socket.onmessage=e=>{
   const {type,data}=JSON.parse(e.data);
-  
+
   if(type==="CLAIM_RESULT"){
-    alert(data.message);
+    if(data.status==="SUCCESS") showClaim(`${data.player} claimed ${data.claim}`,"success");
+    if(data.status==="INVALID") showClaim("Invalid Claim","invalid");
+    if(data.status==="ALREADY") showClaim("Already Claimed","already");
   }
 
   if(type==="ROOM_CREATED"){
@@ -127,25 +108,16 @@ socket.onmessage = e => {
   }
 };
 
-/* Buttons */
 document.getElementById("create-room-btn").onclick=()=>{
-  const n=document.getElementById("player-name").value.trim();
-  if(!n) return alert("Enter name");
-  socket.send(JSON.stringify({type:"CREATE_ROOM",data:{player_name:n}}));
+  socket.send(JSON.stringify({type:"CREATE_ROOM",data:{player_name:playerName.value}}));
 };
-
 document.getElementById("join-room-btn").onclick=()=>{
-  const n=document.getElementById("player-name").value.trim();
-  const r=document.getElementById("room-input").value.trim();
-  if(!n||!r) return alert("Fill all");
-  socket.send(JSON.stringify({type:"JOIN_ROOM",data:{player_name:n,room_id:r}}));
+  socket.send(JSON.stringify({type:"JOIN_ROOM",data:{player_name:playerName.value,room_id:room_input.value}}));
   showScreen("waiting-screen");
 };
-
 document.getElementById("start-game-btn").onclick=()=>{
-  if(isHost) socket.send(JSON.stringify({type:"START_GAME"}));
+  socket.send(JSON.stringify({type:"START_GAME"}));
 };
-
 document.getElementById("draw-btn").onclick=()=>{
   socket.send(JSON.stringify({type:"DRAW_NUMBER"}));
 };
