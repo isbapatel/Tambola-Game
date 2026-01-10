@@ -89,7 +89,7 @@ hr {
 
 .ticket-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(9, 1fr);
   gap: 6px;
 }
 
@@ -111,7 +111,7 @@ hr {
 
 .ticket-cell.empty {
   background: transparent;
-  cursor: default;
+  border: 1px dashed rgba(255,255,255,0.25);
 }
 
 
