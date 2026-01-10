@@ -28,6 +28,7 @@ async def handler(ws):
         t=data["type"]
         d=data.get("data",{})
 
+        # CREATE ROOM
         if t=="CREATE_ROOM":
             player=d["player_name"]
             room_id=generate_room_id()
@@ -41,13 +42,24 @@ async def handler(ws):
                 "ended":False
             }
             await ws.send(json.dumps({"type":"ROOM_CREATED","data":{"room_id":room_id}}))
+            await broadcast(rooms[room_id],{
+                "type":"PLAYERS_UPDATE",
+                "data":{"players":rooms[room_id]["players"]}
+            })
 
+        # JOIN ROOM
         elif t=="JOIN_ROOM":
             room_id=d["room_id"]
             player=d["player_name"]
-            rooms[room_id]["players"].append(player)
-            rooms[room_id]["sockets"].append(ws)
+            room=rooms[room_id]
+            room["players"].append(player)
+            room["sockets"].append(ws)
+            await broadcast(room,{
+                "type":"PLAYERS_UPDATE",
+                "data":{"players":room["players"]}
+            })
 
+        # START GAME
         elif t=="START_GAME":
             room=rooms[room_id]
             for i,p in enumerate(room["players"]):
@@ -59,10 +71,10 @@ async def handler(ws):
                 }))
             await broadcast(room,{"type":"GAME_STARTED","data":{}})
 
+        # DRAW NUMBER
         elif t=="DRAW_NUMBER":
             room=rooms[room_id]
-            if room["ended"]:
-                continue
+            if room["ended"]: continue
 
             n=random.randint(1,90)
             while n in room["numbers"]:
@@ -71,57 +83,54 @@ async def handler(ws):
             room["numbers"].add(n)
             await broadcast(room,{"type":"NUMBER_DRAWN","data":{"number":n}})
 
-        elif t=="CLAIM_LINE":
+        # MAKE CLAIM (NEW)
+        elif t=="MAKE_CLAIM":
             room=rooms[room_id]
-            if room["line_claimed"]:
-                await ws.send(json.dumps({
-                    "type":"CLAIM_RESULT",
-                    "data":{"message":"Line already claimed"}
-                }))
-                continue
-
+            claim=d["claim"]
             ticket=room["tickets"][player]
             drawn=room["numbers"]
 
-            valid=any(all(n==0 or n in drawn for n in row) for row in ticket)
+            def rows():
+                nums=[n for r in ticket for n in r if n!=0]
+                return [nums[0:5],nums[5:10],nums[10:15]]
 
-            if valid:
-                room["line_claimed"]=True
-                room["scores"][player]+=1
-                await broadcast(room,{
-                    "type":"SCORE_UPDATE",
-                    "data":{"scores":room["scores"]}
-                })
+            valid=False
+            if claim=="QUICK_5":
+                valid=len(drawn)>=5
+            elif claim=="FIRST_LINE":
+                valid=all(n in drawn for n in rows()[0])
+            elif claim=="SECOND_LINE":
+                valid=all(n in drawn for n in rows()[1])
+            elif claim=="THIRD_LINE":
+                valid=all(n in drawn for n in rows()[2])
+            elif claim=="TAMBOLA":
+                valid=all(n in drawn for r in ticket for n in r if n!=0)
+
+            if not valid:
                 await ws.send(json.dumps({
                     "type":"CLAIM_RESULT",
-                    "data":{"message":"Line claimed!"}
+                    "data":{"message":"❌ Invalid Claim"}
                 }))
-            else:
-                await ws.send(json.dumps({
-                    "type":"CLAIM_RESULT",
-                    "data":{"message":"Invalid line"}
-                }))
-
-        elif t=="CLAIM_TAMBOLA":
-            room=rooms[room_id]
-            if room["ended"]:
                 continue
 
-            nums=[n for r in room["tickets"][player] for n in r if n!=0]
-            if all(n in room["numbers"] for n in nums):
-                room["ended"]=True
-                room["scores"][player]+=5
+            room["scores"][player]=room["scores"].get(player,0)+1
+            await broadcast(room,{
+                "type":"SCORE_UPDATE",
+                "data":{"scores":room["scores"]}
+            })
 
-                leaderboard=sorted(room["scores"].items(), key=lambda x:x[1], reverse=True)
+            await ws.send(json.dumps({
+                "type":"CLAIM_RESULT",
+                "data":{"message":f"✅ {claim} Claimed!"}
+            }))
+
+            if claim=="TAMBOLA":
+                room["ended"]=True
+                leaderboard=sorted(room["scores"].items(),key=lambda x:x[1],reverse=True)
                 await broadcast(room,{
                     "type":"GAME_ENDED",
                     "data":{"leaderboard":[{"name":p,"score":s} for p,s in leaderboard]}
                 })
-            else:
-                await ws.send(json.dumps({
-                    "type":"CLAIM_RESULT",
-                    "data":{"message":"Invalid Tambola"}
-                }))
 
 async def main():
     async with websockets.serve(handler,"0.0.0.0",PORT):
