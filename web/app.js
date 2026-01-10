@@ -13,7 +13,6 @@ function renderTicket(ticket){
   const div=document.getElementById("ticket");
   div.innerHTML="";
   marked.clear();
-
   ticket.forEach(row=>{
     const r=document.createElement("div");
     r.className="ticket-row";
@@ -109,15 +108,18 @@ socket.onmessage=e=>{
 };
 
 document.getElementById("create-room-btn").onclick=()=>{
-  socket.send(JSON.stringify({type:"CREATE_ROOM",data:{player_name:playerName.value}}));
+  const name=document.getElementById("player-name").value.trim();
+  if(!name) return;
+  socket.send(JSON.stringify({type:"CREATE_ROOM",data:{player_name:name}}));
 };
+
 document.getElementById("join-room-btn").onclick=()=>{
-  socket.send(JSON.stringify({type:"JOIN_ROOM",data:{player_name:playerName.value,room_id:room_input.value}}));
+  const name=document.getElementById("player-name").value.trim();
+  const room=document.getElementById("room-input").value.trim();
+  if(!name||!room) return;
+  socket.send(JSON.stringify({type:"JOIN_ROOM",data:{player_name:name,room_id:room}}));
   showScreen("waiting-screen");
 };
-document.getElementById("start-game-btn").onclick=()=>{
-  socket.send(JSON.stringify({type:"START_GAME"}));
-};
-document.getElementById("draw-btn").onclick=()=>{
-  socket.send(JSON.stringify({type:"DRAW_NUMBER"}));
-};
+
+document.getElementById("start-game-btn").onclick=()=>socket.send(JSON.stringify({type:"START_GAME"}));
+document.getElementById("draw-btn").onclick=()=>socket.send(JSON.stringify({type:"DRAW_NUMBER"}));
