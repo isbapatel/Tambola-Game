@@ -10,6 +10,39 @@ def generate_room_id():
 def generate_ticket():
     ticket = [[0]*9 for _ in range(3)]
 
+    # Decide column counts (Tambola standard)
+    col_counts = [1,1,1,2,2,2,2,2,2]  # sum = 15
+    random.shuffle(col_counts)
+
+    for col in range(9):
+        rows = random.sample(range(3), col_counts[col])
+        for r in rows:
+            ticket[r][col] = -1
+
+    # Ensure each row has exactly 5 numbers
+    for r in range(3):
+        while sum(1 for c in range(9) if ticket[r][c] == -1) < 5:
+            c = random.choice([i for i in range(9) if ticket[r][i] == 0])
+            ticket[r][c] = -1
+
+    # Fill numbers column-wise
+    for c in range(9):
+        rows = [r for r in range(3) if ticket[r][c] == -1]
+        if not rows:
+            continue
+
+        start = c*10 + 1
+        end = 90 if c == 8 else start + 9
+        nums = random.sample(range(start, end+1), len(rows))
+        nums.sort()
+
+        for r,n in zip(rows, nums):
+            ticket[r][c] = n
+
+    return ticket
+def generate_ticket():
+    ticket = [[0]*9 for _ in range(3)]
+
     # 5 numbers per row
     row_cols = [sorted(random.sample(range(9), 5)) for _ in range(3)]
     for r in range(3):
