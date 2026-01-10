@@ -1,5 +1,5 @@
-const WS_URL = "wss://python-tambola.onrender.com";
-const socket = new WebSocket(WS_URL);
+const WS_URL="wss://python-tambola.onrender.com";
+const socket=new WebSocket(WS_URL);
 
 let isHost=false;
 let marked=new Set();
@@ -13,6 +13,7 @@ function renderTicket(ticket){
   const div=document.getElementById("ticket");
   div.innerHTML="";
   marked.clear();
+
   ticket.forEach(row=>{
     const r=document.createElement("div");
     r.className="ticket-row";
@@ -109,14 +110,14 @@ socket.onmessage=e=>{
 
 document.getElementById("create-room-btn").onclick=()=>{
   const name=document.getElementById("player-name").value.trim();
-  if(!name) return;
+  if(!name)return;
   socket.send(JSON.stringify({type:"CREATE_ROOM",data:{player_name:name}}));
 };
 
 document.getElementById("join-room-btn").onclick=()=>{
   const name=document.getElementById("player-name").value.trim();
   const room=document.getElementById("room-input").value.trim();
-  if(!name||!room) return;
+  if(!name||!room)return;
   socket.send(JSON.stringify({type:"JOIN_ROOM",data:{player_name:name,room_id:room}}));
   showScreen("waiting-screen");
 };
