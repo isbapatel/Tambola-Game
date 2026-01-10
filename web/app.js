@@ -61,6 +61,10 @@ function claim(type) {
 /* WebSocket */
 socket.onmessage = e => {
   const {type,data}=JSON.parse(e.data);
+  
+  if(type==="CLAIM_RESULT"){
+    alert(data.message);
+  }
 
   if(type==="ROOM_CREATED"){
     document.getElementById("room-id").innerText=data.room_id;
